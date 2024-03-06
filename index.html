@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FreqTuneApp</title>
-<style>
+<title>Sound App Interface</title>
+<!-- CSSスタイルはここに追加してください -->
+   <style>
    body {
     margin: 0;
     font-family: 'Arial', sans-serif;
@@ -88,14 +89,15 @@
 <body>
 
 <div class="container">
-  <!-- 各オシレーターモジュールを3回繰り返します -->
-  <div class="module" id="oscillator1">
+  <!-- オシレーターのモジュールはここに繰り返します -->
+  <div class="module">
     <div class="module-header">
       <select class="waveform-selector">
         <option value="sine">正弦波</option>
         <option value="square">矩形波</option>
         <option value="sawtooth">鋸歯波</option>
         <option value="triangle">三角波</option>
+        <option value="noise">ノイズ</option>
       </select>
       <div class="frequency-display">220 Hz</div>
       <div>...</div>
@@ -107,143 +109,28 @@
     </div>
   </div>
 
-    <!-- 同様に2つ目のオシレーターモジュール -->
- <div class="module" id="oscillator1">
-    <div class="module-header">
-      <select class="waveform-selector">
-        <option value="sine">正弦波</option>
-        <option value="square">矩形波</option>
-        <option value="sawtooth">鋸歯波</option>
-        <option value="triangle">三角波</option>
-      </select>
-      <div class="frequency-display">220 Hz</div>
-      <div>...</div>
-    </div>
-    <div class="controls">
-      <input type="range" min="20" max="2000" value="220" class="frequency-slider">
-      <input type="range" min="0" max="1" step="0.01" value="0.5" class="volume-slider">
-      <button class="play-button">Play</button>
-    </div>
-  </div>
- <!-- 同様に3つ目のオシレーターモジュール -->
-   
- <div class="module" id="oscillator1">
-    <div class="module-header">
-      <select class="waveform-selector">
-        <option value="sine">正弦波</option>
-        <option value="square">矩形波</option>
-        <option value="sawtooth">鋸歯波</option>
-        <option value="triangle">三角波</option>
-      </select>
-      <div class="frequency-display">220 Hz</div>
-      <div>...</div>
-    </div>
-    <div class="controls">
-      <input type="range" min="20" max="2000" value="220" class="frequency-slider">
-      <input type="range" min="0" max="1" step="0.01" value="0.5" class="volume-slider">
-      <button class="play-button">Play</button>
-    </div>
-  </div>
- 
-  <!-- ... -->
- <div class="module" id="oscillator1">
-    <div class="module-header">
-      <select class="waveform-selector">
-        <option value="sine">正弦波</option>
-        <option value="square">矩形波</option>
-        <option value="sawtooth">鋸歯波</option>
-        <option value="triangle">三角波</option>
-      </select>
-      <div class="frequency-display">220 Hz</div>
-      <div>...</div>
-    </div>
-    <div class="controls">
-      <input type="range" min="20" max="2000" value="220" class="frequency-slider">
-      <input type="range" min="0" max="1" step="0.01" value="0.5" class="volume-slider">
-      <button class="play-button">Play</button>
-    </div>
-  </div>
+  <!-- 他のオシレーターモジュールも同様に追加します -->
 
-
-    <div class="module" id="oscillator1">
-    <div class="module-header">
-      <select class="waveform-selector">
-        <option value="sine">正弦波</option>
-        <option value="square">矩形波</option>
-        <option value="sawtooth">鋸歯波</option>
-        <option value="triangle">三角波</option>
-      </select>
-      <div class="frequency-display">220 Hz</div>
-      <div>...</div>
-    </div>
-    <div class="controls">
-      <input type="range" min="20" max="2000" value="220" class="frequency-slider">
-      <input type="range" min="0" max="1" step="0.01" value="0.5" class="volume-slider">
-      <button class="play-button">Play</button>
-    </div>
-  </div>
-
-
-    <div class="module" id="oscillator1">
-    <div class="module-header">
-      <select class="waveform-selector">
-        <option value="sine">正弦波</option>
-        <option value="square">矩形波</option>
-        <option value="sawtooth">鋸歯波</option>
-        <option value="triangle">三角波</option>
-      </select>
-      <div class="frequency-display">220 Hz</div>
-      <div>...</div>
-    </div>
-    <div class="controls">
-      <input type="range" min="20" max="2000" value="220" class="frequency-slider">
-      <input type="range" min="0" max="1" step="0.01" value="0.5" class="volume-slider">
-      <button class="play-button">Play</button>
-    </div>
-  </div>
-
-
-    <div class="module" id="oscillator1">
-    <div class="module-header">
-      <select class="waveform-selector">
-        <option value="sine">正弦波</option>
-        <option value="square">矩形波</option>
-        <option value="sawtooth">鋸歯波</option>
-        <option value="triangle">三角波</option>
-      </select>
-      <div class="frequency-display">220 Hz</div>
-      <div>...</div>
-    </div>
-    <div class="controls">
-      <input type="range" min="20" max="2000" value="220" class="frequency-slider">
-      <input type="range" min="0" max="1" step="0.01" value="0.5" class="volume-slider">
-      <button class="play-button">Play</button>
-    </div>
-  </div>
-
-
-    <div class="module" id="oscillator1">
-    <div class="module-header">
-      <select class="waveform-selector">
-        <option value="sine">正弦波</option>
-        <option value="square">矩形波</option>
-        <option value="sawtooth">鋸歯波</option>
-        <option value="triangle">三角波</option>
-      </select>
-      <div class="frequency-display">220 Hz</div>
-      <div>...</div>
-    </div>
-    <div class="controls">
-      <input type="range" min="20" max="2000" value="220" class="frequency-slider">
-      <input type="range" min="0" max="1" step="0.01" value="0.5" class="volume-slider">
-      <button class="play-button">Play</button>
-    </div>
-  </div>
-  <!-- ... -->
 </div>
 
 <script>
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+function createWhiteNoise(audioContext) {
+  const bufferSize = audioContext.sampleRate;
+  const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+  const data = buffer.getChannelData(0);
+
+  for (let i = 0; i < bufferSize; i++) {
+    data[i] = Math.random() * 2 - 1;
+  }
+
+  const whiteNoiseSource = audioContext.createBufferSource();
+  whiteNoiseSource.buffer = buffer;
+  whiteNoiseSource.loop = true;
+
+  return whiteNoiseSource;
+}
 
 function createOscillatorModule(moduleElement) {
   let oscillator;
@@ -272,7 +159,7 @@ function createOscillatorModule(moduleElement) {
   frequencySlider.addEventListener('input', function() {
     const frequency = this.value;
     frequencyDisplay.textContent = `${frequency} Hz`;
-    if (oscillator) {
+    if (oscillator && oscillator instanceof OscillatorNode) {
       oscillator.frequency.value = frequency;
     }
   });
@@ -285,23 +172,29 @@ function createOscillatorModule(moduleElement) {
   });
 
   waveformSelector.addEventListener('change', function() {
-    const waveform = this.value;
     if (oscillator) {
-      oscillator.type = waveform;
+      if (this.value === 'noise') {
+        stopOscillator();
+        startOscillator();
+      } else {
+        oscillator.type = this.value;
+      }
     }
   });
 
   function startOscillator() {
-    oscillator = audioContext.createOscillator();
+    if (waveformSelector.value === 'noise') {
+      oscillator = createWhiteNoise(audioContext);
+    } else {
+      oscillator = audioContext.createOscillator();
+      oscillator.type = waveformSelector.value;
+      oscillator.frequency.value = frequencySlider.value;
+    }
     gainNode = audioContext.createGain();
-
-    oscillator.type = waveformSelector.value;
-    oscillator.frequency.value = frequencySlider.value;
     gainNode.gain.value = volumeSlider.value;
 
     oscillator.connect(gainNode);
     gainNode.connect(audioContext.destination);
-
     oscillator.start();
   }
 
