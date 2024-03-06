@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FreqTuneApp</title>
+<style>
+   body {
+    margin: 0;
+    font-family: 'Arial', sans-serif;
+    background-color: #333;
+    color: white;
+  }
+  .container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-around;
+    height: 100vh;
+    padding: 20px;
+  }
+  .module {
+    background-color: #555;
+    border-radius: 10px;
+    padding: 20px;
+    margin: 10px;
+    width: 80%;
+  }
+  .module-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .frequency {
+    font-size: 1.5em;
+  }
+  .controls {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 15px;
+  }
+  .slider {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 15px;
+    border-radius: 5px;   
+    background: #d3d3d3;
+    outline: none;
+    opacity: 0.7;
+    -webkit-transition: .2s;
+    transition: opacity .2s;
+  }
+  .slider:hover {
+    opacity: 1;
+  }
+  .slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 25px;
+    height: 25px;
+    border-radius: 50%; 
+    background: #4CAF50;
+    cursor: pointer;
+  }
+  .slider::-moz-range-thumb {
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    background: #4CAF50;
+    cursor: pointer;
+  }
+  button {
+    border: none;
+    color: white;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px 2px;
+    cursor: pointer;
+  }
+  .play-button {
+    background-color: #008CBA;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- 各オシレーターモジュールを3回繰り返します -->
+  <div class="module" id="oscillator1">
+    <div class="module-header">
+      <select class="waveform-selector">
+        <option value="sine">正弦波</option>
+        <option value="square">矩形波</option>
+        <option value="sawtooth">鋸歯波</option>
+        <option value="triangle">三角波</option>
+      </select>
+      <div class="frequency-display">220 Hz</div>
+      <div>...</div>
+    </div>
+    <div class="controls">
+      <input type="range" min="20" max="2000" value="220" class="frequency-slider">
+      <input type="range" min="0" max="1" step="0.01" value="0.5" class="volume-slider">
+      <button class="play-button">Play</button>
+    </div>
+  </div>
+ <div class="module" id="oscillator1">
+    <div class="module-header">
+      <select class="waveform-selector">
+        <option value="sine">正弦波</option>
+        <option value="square">矩形波</option>
+        <option value="sawtooth">鋸歯波</option>
+        <option value="triangle">三角波</option>
+      </select>
+      <div class="frequency-display">220 Hz</div>
+      <div>...</div>
+    </div>
+    <div class="controls">
+      <input type="range" min="20" max="2000" value="220" class="frequency-slider">
+      <input type="range" min="0" max="1" step="0.01" value="0.5" class="volume-slider">
+      <button class="play-button">Play</button>
+    </div>
+  </div>
+ <div class="module" id="oscillator1">
+    <div class="module-header">
+      <select class="waveform-selector">
+        <option value="sine">正弦波</option>
+        <option value="square">矩形波</option>
+        <option value="sawtooth">鋸歯波</option>
+        <option value="triangle">三角波</option>
+      </select>
+      <div class="frequency-display">220 Hz</div>
+      <div>...</div>
+    </div>
+    <div class="controls">
+      <input type="range" min="20" max="2000" value="220" class="frequency-slider">
+      <input type="range" min="0" max="1" step="0.01" value="0.5" class="volume-slider">
+      <button class="play-button">Play</button>
+    </div>
+  </div>
+  <!-- 同様に2つ目のオシレーターモジュール -->
+  <!-- ... -->
+
+  <!-- 同様に3つ目のオシレーターモジュール -->
+  <!-- ... -->
+</div>
+
+<script>
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+function createOscillatorModule(moduleElement) {
+  let oscillator;
+  let gainNode;
+
+  const waveformSelector = moduleElement.querySelector('.waveform-selector');
+  const frequencyDisplay = moduleElement.querySelector('.frequency-display');
+  const frequencySlider = moduleElement.querySelector('.frequency-slider');
+  const volumeSlider = moduleElement.querySelector('.volume-slider');
+  const playButton = moduleElement.querySelector('.play-button');
+
+  playButton.addEventListener('click', function() {
+    if (audioContext.state === 'suspended') {
+      audioContext.resume();
+    }
+
+    if (this.textContent === 'Play') {
+      startOscillator();
+      this.textContent = 'Stop';
+    } else {
+      stopOscillator();
+      this.textContent = 'Play';
+    }
+  });
+
+  frequencySlider.addEventListener('input', function() {
+    const frequency = this.value;
+    frequencyDisplay.textContent = `${frequency} Hz`;
+    if (oscillator) {
+      oscillator.frequency.value = frequency;
+    }
+  });
+
+  volumeSlider.addEventListener('input', function() {
+    const volume = this.value;
+    if (gainNode) {
+      gainNode.gain.value = volume;
+    }
+  });
+
+  waveformSelector.addEventListener('change', function() {
+    const waveform = this.value;
+    if (oscillator) {
+      oscillator.type = waveform;
+    }
+  });
+
+  function startOscillator() {
+    oscillator = audioContext.createOscillator();
+    gainNode = audioContext.createGain();
+
+    oscillator.type = waveformSelector.value;
+    oscillator.frequency.value = frequencySlider.value;
+    gainNode.gain.value = volumeSlider.value;
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    oscillator.start();
+  }
+
+  function stopOscillator() {
+    if (oscillator) {
+      oscillator.stop();
+      oscillator.disconnect();
+    }
+  }
+
+  return {
+    startOscillator,
+    stopOscillator
+  };
+}
+
+// オシレーターモジュールのインスタンスを作成します
+const modules = Array.from(document.querySelectorAll('.module'))
+                    .map(moduleElement => createOscillatorModule(moduleElement));
+
+</script>
+
+</body>
+</html>
