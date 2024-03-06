@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sound App Interface</title>
+<title>FreqTuneApp</title>
 <!-- CSSスタイルはここに追加してください -->
    <style>
    body {
@@ -91,6 +91,44 @@
 <div class="container">
   <!-- オシレーターのモジュールはここに繰り返します -->
   <div class="module">
+    <div class="module-header">
+      <select class="waveform-selector">
+        <option value="sine">正弦波</option>
+        <option value="square">矩形波</option>
+        <option value="sawtooth">鋸歯波</option>
+        <option value="triangle">三角波</option>
+        <option value="noise">ノイズ</option>
+      </select>
+      <div class="frequency-display">220 Hz</div>
+      <div>...</div>
+    </div>
+    <div class="controls">
+      <input type="range" min="20" max="2000" value="220" class="frequency-slider">
+      <input type="range" min="0" max="1" step="0.01" value="0.5" class="volume-slider">
+      <button class="play-button">Play</button>
+    </div>
+  </div>
+
+<div class="module">
+    <div class="module-header">
+      <select class="waveform-selector">
+        <option value="sine">正弦波</option>
+        <option value="square">矩形波</option>
+        <option value="sawtooth">鋸歯波</option>
+        <option value="triangle">三角波</option>
+        <option value="noise">ノイズ</option>
+      </select>
+      <div class="frequency-display">220 Hz</div>
+      <div>...</div>
+    </div>
+    <div class="controls">
+      <input type="range" min="20" max="2000" value="220" class="frequency-slider">
+      <input type="range" min="0" max="1" step="0.01" value="0.5" class="volume-slider">
+      <button class="play-button">Play</button>
+    </div>
+  </div>
+
+<div class="module">
     <div class="module-header">
       <select class="waveform-selector">
         <option value="sine">正弦波</option>
