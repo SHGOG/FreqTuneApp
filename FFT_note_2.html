@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Melody Analysis with Note Count and FFT</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        #controls { margin: 20px 0; }
+        #tableContainer {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 90%;
+            margin: 20px auto;
+        }
+        #resultsTable {
+            border-collapse: collapse;
+            margin: 5px;
+        }
+        #resultsTable th, #resultsTable td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: center;
+        }
+        #resultsTable th {
+            background-color: #f4f4f4;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            margin-top: 20px;
+            width: 90%;
+        }
+    </style>
+</head>
+<body>
+    <h1>Real-time Melody Analysis with Note Count and FFT</h1>
+    <div id="controls">
+        <input type="file" id="audioFile" accept=".wav">
+        <label>
+            Frequency Range: 
+            <input type="number" id="minFreq" placeholder="Min (Hz)" value="1000">
+            to 
+            <input type="number" id="maxFreq" placeholder="Max (Hz)" value="16000">
+        </label>
+        <label>
+            Bins:
+            <input type="number" id="bins" value="200">
+        </label>
+        <label>
+            Magnitude Threshold:
+            <input type="range" id="magnitudeThresholdSlider" min="-100" max="0" value="-50" step="1" oninput="updateMagnitudeThreshold()">
+            <span id="magnitudeThresholdLabel">-50 dB</span>
+        </label>
+        <button onclick="startAnalysis()">Start Analysis</button>
+    </div>
+
+    <div id="tableContainer">
+        <table id="resultsTable">
+            <thead>
+                <tr id="noteRow">
+                    <!-- 音階の見出しがここに追加されます -->
+                </tr>
+                <tr id="countRow">
+                    <!-- 音階の出現回数がここに表示されます -->
+                </tr>
+            </thead>
+        </table>
+    </div>
+
+    <canvas id="fftCanvas" height="300"></canvas>
+
+    <script>
+        let audioContext, analyser, source, animationId;
+        let noteCounts = {};
+        let magnitudeThreshold = -50; // 初期閾値
+
+       const notes = [
+            { note: "D-2", frequency: 146.832384 },
+            { note: "D#-2", frequency: 155.5634919 },
+            { note: "E-2", frequency: 164.8137785 },
+            { note: "F-2", frequency: 174.6141157 },
+            { note: "F#-2", frequency: 184.9972114 },
+            { note: "G-2", frequency: 195.997718 },
+            { note: "G#-2", frequency: 207.6523488 },
+            { note: "A-2", frequency: 220.0 },
+            { note: "A#-2", frequency: 233.0818808 },
+            { note: "B-2", frequency: 246.9416506 },
+            { note: "C-1", frequency: 261.6255653 },
+            { note: "C#-1", frequency: 277.182631 },
+            { note: "D-1", frequency: 293.6647679 },
+            { note: "D#-1", frequency: 311.1269837 },
+            { note: "E-1", frequency: 329.6275569 },
+            { note: "F-1", frequency: 349.2282314 },
+            { note: "F#-1", frequency: 369.9944227 },
+            { note: "G-1", frequency: 391.995436 },
+            { note: "G#-1", frequency: 415.3046976 },
+            { note: "A-1", frequency: 440.0 },
+            { note: "A#-1", frequency: 466.1637615 },
+            { note: "B-1", frequency: 493.8833013 },
+            { note: "C0", frequency: 523.2511306 },
+            { note: "C#0", frequency: 554.365262 },
+            { note: "D0", frequency: 587.3295358 },
+            { note: "D#0", frequency: 622.2539674 },
+            { note: "E0", frequency: 659.2551138 },
+            { note: "F0", frequency: 698.4564629 },
+            { note: "F#0", frequency: 739.9888454 },
+            { note: "G0", frequency: 783.990872 },
+            { note: "G#0", frequency: 830.6093952 },
+            { note: "A0", frequency: 880.0 },
+            { note: "A#0", frequency: 932.327523 },
+            { note: "B0", frequency: 987.7666025 },
+            { note: "C1", frequency: 1046.502261 },
+            { note: "C#1", frequency: 1108.730524 },
+            { note: "D1", frequency: 1174.659072 },
+            { note: "D#1", frequency: 1244.507935 },
+            { note: "E1", frequency: 1318.510228 },
+            { note: "F1", frequency: 1396.912926 },
+            { note: "F#1", frequency: 1479.977691 }
+        ];
+
+        notes.forEach(note => noteCounts[note.note] = 0);
+
+        function updateMagnitudeThreshold() {
+            const slider = document.getElementById("magnitudeThresholdSlider");
+            magnitudeThreshold = parseFloat(slider.value);
+            document.getElementById("magnitudeThresholdLabel").textContent = `${magnitudeThreshold} dB`;
+        }
+
+        function resizeCanvas() {
+            const fftCanvas = document.getElementById('fftCanvas');
+            fftCanvas.width = window.innerWidth * 0.9;
+            fftCanvas.height = window.innerHeight * 0.3;
+        }
+
+        window.onresize = resizeCanvas;
+
+        async function startAnalysis() {
+            const audioFileInput = document.getElementById('audioFile');
+            const minFreq = parseFloat(document.getElementById('minFreq').value);
+            const maxFreq = parseFloat(document.getElementById('maxFreq').value);
+            const numBins = parseInt(document.getElementById('bins').value);
+            const fftCanvas = document.getElementById('fftCanvas');
+            const ctx = fftCanvas.getContext('2d');
+
+            resizeCanvas();
+
+            if (audioFileInput.files.length === 0) {
+                alert("Please select a WAV file.");
+                return;
+            }
+
+            if (audioContext) {
+                audioContext.close();
+                cancelAnimationFrame(animationId);
+            }
+
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const audioData = await audioFileInput.files[0].arrayBuffer();
+            const audioBuffer = await audioContext.decodeAudioData(audioData);
+
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 32768;
+            analyser.smoothingTimeConstant = 0.85;
+            analyser.minDecibels = -90;
+            analyser.maxDecibels = -10;
+
+            const sampleRate = audioContext.sampleRate;
+            const nyquist = sampleRate / 2;
+            
+            if (maxFreq > nyquist) {
+                alert(`Max frequency exceeds Nyquist limit of ${nyquist} Hz. Setting maxFreq to ${nyquist}.`);
+                maxFreq = nyquist;
+            }
+
+            source = audioContext.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(analyser);
+            analyser.connect(audioContext.destination);
+            source.start();
+
+            const frequencyData = new Float32Array(analyser.frequencyBinCount);
+            const minBin = Math.floor((minFreq / sampleRate) * analyser.fftSize);
+            const maxBin = Math.floor((maxFreq / sampleRate) * analyser.fftSize);
+            const binWidth = (maxBin - minBin) / numBins;
+
+            function getNoteFromFrequency(frequency) {
+                let closestNote = notes[0];
+                for (const note of notes) {
+                    if (Math.abs(note.frequency - frequency) < Math.abs(closestNote.frequency - frequency)) {
+                        closestNote = note;
+                    }
+                }
+                return closestNote;
+            }
+
+            function initializeTable() {
+                const noteRow = document.getElementById('noteRow');
+                const countRow = document.getElementById('countRow');
+                noteRow.innerHTML = '';
+                countRow.innerHTML = '';
+
+                for (const note of notes) {
+                    const noteHeader = document.createElement('th');
+                    noteHeader.textContent = note.note;
+                    noteRow.appendChild(noteHeader);
+
+                    const countCell = document.createElement('td');
+                    countCell.textContent = 0;
+                    countCell.id = `count-${note.note}`;
+                    countRow.appendChild(countCell);
+                }
+            }
+
+            function updateTable() {
+                for (const note of notes) {
+                    const countCell = document.getElementById(`count-${note.note}`);
+                    countCell.textContent = noteCounts[note.note];
+                }
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, fftCanvas.width, fftCanvas.height);
+                analyser.getFloatFrequencyData(frequencyData);
+
+                for (let i = minBin; i < maxBin; i++) {
+                    const frequency = (i * sampleRate) / analyser.fftSize;
+                    const magnitude = frequencyData[i];
+                    if (magnitude > magnitudeThreshold) { // スライダーで設定した閾値を使用
+                        const note = getNoteFromFrequency(frequency);
+                        if (note) noteCounts[note.note]++;
+                    }
+                }
+                updateTable();
+
+                ctx.beginPath();
+                ctx.moveTo(0, fftCanvas.height);
+                for (let i = 0; i < numBins; i++) {
+                    const startBin = Math.floor(minBin + i * binWidth);
+                    const endBin = Math.floor(minBin + (i + 1) * binWidth);
+                    const binAverage = Array.from(frequencyData.slice(startBin, endBin))
+                                            .reduce((acc, val) => acc + val, 0) / (endBin - startBin);
+                    const magnitude = fftCanvas.height + binAverage * 2;
+                    ctx.lineTo((i / numBins) * fftCanvas.width, magnitude);
+                }
+                ctx.stroke();
+
+                const numLabels = 10;
+                for (let i = 0; i <= numLabels; i++) {
+                    const labelFreq = minFreq + (i / numLabels) * (maxFreq - minFreq);
+                    const x = (i / numLabels) * fftCanvas.width;
+                    ctx.fillText(`${Math.round(labelFreq)} Hz`, x, fftCanvas.height - 5);
+                }
+
+                animationId = requestAnimationFrame(draw);
+            }
+
+            initializeTable();
+            draw();
+       
+
+        }
+
+        window.onload = resizeCanvas;
+    </script>
+</body>
+</html>

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Melody Analysis with Note Count and FFT</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        #controls { margin: 20px 0; }
+        #resultsTable {
+            border-collapse: collapse;
+            margin: 20px auto;
+            width: 90%;
+        }
+        #resultsTable th, #resultsTable td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: center;
+        }
+        #resultsTable th {
+            background-color: #f4f4f4;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            margin-top: 20px;
+            width: 90%;
+        }
+    </style>
+</head>
+<body>
+    <h1>Real-time Melody Analysis with Note Count and FFT</h1>
+    <div id="controls">
+        <input type="file" id="audioFile" accept=".wav">
+        <label>
+            Magnitude Threshold:
+            <input type="range" id="magnitudeThresholdSlider" min="-100" max="0" value="-50" step="1" oninput="updateMagnitudeThreshold()">
+            <span id="magnitudeThresholdLabel">-50 dB</span>
+        </label>
+        <label>
+            Tolerance (%):
+            <input type="range" id="toleranceSlider" min="0" max="10" value="2" step="0.1" oninput="updateTolerance()">
+            <span id="toleranceLabel">2%</span>
+        </label>
+        <label>
+            Timeout Duration (ms):
+            <input type="number" id="timeoutDurationInput" min="0" value="100" oninput="updateTimeoutDuration()">
+        </label>
+        <button onclick="startAnalysis()">Start Analysis</button>
+    </div>
+
+    <canvas id="fftCanvas" height="300"></canvas>
+    
+    <div id="tableContainer">
+        <!-- 出現したオクターブごとの音階テーブルをここに挿入 -->
+    </div>
+
+    <script>
+        let audioContext, analyser, source, animationId;
+        let noteCounts = {};
+        let magnitudeThreshold = -50; // 初期閾値
+        let tolerance = 0.02; // 初期許容範囲（2%）
+        let timeoutDuration = 100; // 初期タイムアウト間隔
+        let notesInRange = []; // 周波数範囲に基づく音階配列
+
+        const minFreq = 20; // 周波数範囲の最小値
+        const maxFreq = 20000; // 周波数範囲の最大値
+        const numBins = 16384; // 最大ビン数
+
+        // 周波数範囲に基づく音階配列を生成する関数（A0 = 440 Hz基準）
+        function generateNotesInRange(minFreq, maxFreq) {
+            const notes = [];
+            const baseFrequency = 440; // A0の周波数
+            const semitoneRatio = Math.pow(2, 1 / 12); // 12平均律の半音の比率
+            const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+            let frequency = baseFrequency;
+            let octave = 0;
+
+            // minFreqより低い周波数まで下げる
+            while (frequency / 2 >= minFreq) {
+                frequency /= 2;
+                octave--;
+            }
+
+            // minFreqからmaxFreqの範囲で音階を生成
+            while (frequency <= maxFreq) {
+                for (let i = 0; i < 12; i++) {
+                    if (frequency >= minFreq && frequency <= maxFreq) {
+                        const noteName = noteNames[i] + octave;
+                        notes.push({ note: noteName, frequency: frequency, octave });
+                    }
+                    frequency *= semitoneRatio;
+                }
+                octave++;
+            }
+            return notes;
+        }
+
+        function updateMagnitudeThreshold() {
+            const slider = document.getElementById("magnitudeThresholdSlider");
+            magnitudeThreshold = parseFloat(slider.value);
+            document.getElementById("magnitudeThresholdLabel").textContent = `${magnitudeThreshold} dB`;
+        }
+
+        function updateTolerance() {
+            const slider = document.getElementById("toleranceSlider");
+            tolerance = parseFloat(slider.value) / 100; // パーセントから小数に変換
+            document.getElementById("toleranceLabel").textContent = `${slider.value}%`;
+        }
+
+        function updateTimeoutDuration() {
+            timeoutDuration = parseInt(document.getElementById("timeoutDurationInput").value);
+        }
+
+        function resizeCanvas() {
+            const fftCanvas = document.getElementById('fftCanvas');
+            fftCanvas.width = window.innerWidth * 0.9;
+            fftCanvas.height = window.innerHeight * 0.3;
+        }
+
+        window.onresize = resizeCanvas;
+
+        async function startAnalysis() {
+            const audioFileInput = document.getElementById('audioFile');
+            const fftCanvas = document.getElementById('fftCanvas');
+            const ctx = fftCanvas.getContext('2d');
+
+            resizeCanvas();
+
+            if (audioFileInput.files.length === 0) {
+                alert("Please select a WAV file.");
+                return;
+            }
+
+            if (audioContext) {
+                audioContext.close();
+                cancelAnimationFrame(animationId);
+            }
+
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const audioData = await audioFileInput.files[0].arrayBuffer();
+            const audioBuffer = await audioContext.decodeAudioData(audioData);
+
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 32768; // 最大のFFT精度に設定
+            analyser.smoothingTimeConstant = 0.85;
+            analyser.minDecibels = -90;
+            analyser.maxDecibels = -10;
+
+            const sampleRate = audioContext.sampleRate;
+
+            source = audioContext.createBufferSource();
+            source.buffer = audioBuffer;
+            source.connect(analyser);
+            analyser.connect(audioContext.destination);
+            source.start();
+
+            // 固定された周波数範囲に基づき音階配列を生成
+            notesInRange = generateNotesInRange(minFreq, maxFreq);
+            noteCounts = {}; // 音階ごとの出現回数を初期化
+
+            const frequencyData = new Float32Array(analyser.frequencyBinCount);
+            const minBin = Math.floor((minFreq / sampleRate) * analyser.fftSize);
+            const maxBin = Math.floor((maxFreq / sampleRate) * analyser.fftSize);
+            const binWidth = (maxBin - minBin) / numBins;
+
+            function getNoteFromFrequency(frequency) {
+                let closestNote = null;
+                let closestDistance = Infinity;
+
+                for (const note of notesInRange) {
+                    const distance = Math.abs(frequency - note.frequency);
+                    const withinTolerance = distance / note.frequency <= tolerance;
+
+                    if (withinTolerance && distance < closestDistance) {
+                        closestNote = note;
+                        closestDistance = distance;
+                    }
+                }
+
+                return closestNote;
+            }
+
+            function initializeTable() {
+                document.getElementById('tableContainer').innerHTML = ''; // 表をリセット
+            }
+
+            function updateTable() {
+                const tableContainer = document.getElementById('tableContainer');
+                const octaves = {}; // 各オクターブごとにノートを分けて保存
+
+                // 出現したノートをオクターブごとに分けて集計
+                for (const note in noteCounts) {
+                    if (noteCounts[note] > 0) {
+                        const noteData = notesInRange.find(n => n.note === note);
+                        const octave = noteData.octave;
+                        if (!octaves[octave]) {
+                            octaves[octave] = [];
+                        }
+                        octaves[octave].push({ name: note, frequency: Math.round(noteData.frequency), count: noteCounts[note] });
+                    }
+                }
+
+                // オクターブごとにテーブルを生成
+                for (const octave in octaves) {
+                    const table = document.createElement('table');
+                    table.className = 'resultsTable';
+                    
+                    const noteRow = document.createElement('tr');
+                    const frequencyRow = document.createElement('tr');
+                    const countRow = document.createElement('tr');
+
+                    for (const noteData of octaves[octave]) {
+                        const noteHeader = document.createElement('th');
+                        noteHeader.textContent = noteData.name;
+                        noteRow.appendChild(noteHeader);
+
+                        const frequencyCell = document.createElement('td');
+                        frequencyCell.textContent = noteData.frequency;
+                        frequencyRow.appendChild(frequencyCell);
+
+                        const countCell = document.createElement('td');
+                                               countCell.textContent = noteData.count;
+                        countRow.appendChild(countCell);
+                    }
+
+                    // テーブルに行を追加
+                    table.appendChild(noteRow);
+                    table.appendChild(frequencyRow);
+                    table.appendChild(countRow);
+
+                    // オクターブごとのラベルを追加
+                    const octaveLabel = document.createElement('h3');
+                    octaveLabel.textContent = `Octave ${octave}`;
+                    tableContainer.appendChild(octaveLabel);
+                    tableContainer.appendChild(table);
+                }
+            }
+
+            function draw() {
+                ctx.clearRect(0, 0, fftCanvas.width, fftCanvas.height);
+                analyser.getFloatFrequencyData(frequencyData);
+
+                const recentNotes = new Set(); // 直近で記録されたノートを追跡
+
+                for (let i = minBin; i < maxBin; i++) {
+                    const frequency = (i * sampleRate) / analyser.fftSize;
+                    const magnitude = frequencyData[i];
+
+                    if (magnitude > magnitudeThreshold) {
+                        const note = getNoteFromFrequency(frequency);
+
+                        if (note && !recentNotes.has(note.note)) {
+                            recentNotes.add(note.note);
+                            setTimeout(() => recentNotes.delete(note.note), timeoutDuration); // 設定した間隔でノートを再度記録可能に
+
+                            if (!noteCounts[note.note]) noteCounts[note.note] = 0;
+                            noteCounts[note.note]++;
+                        }
+                    }
+                }
+                updateTable();
+
+                ctx.beginPath();
+                ctx.moveTo(0, fftCanvas.height);
+                for (let i = 0; i < numBins; i++) {
+                    const startBin = Math.floor(minBin + i * binWidth);
+                    const endBin = Math.floor(minBin + (i + 1) * binWidth);
+                    const binAverage = Array.from(frequencyData.slice(startBin, endBin))
+                                            .reduce((acc, val) => acc + val, 0) / (endBin - startBin);
+                    const magnitude = fftCanvas.height + binAverage * 2;
+                    ctx.lineTo((i / numBins) * fftCanvas.width, magnitude);
+                }
+                ctx.stroke();
+
+                const numLabels = 10;
+                for (let i = 0; i <= numLabels; i++) {
+                    const labelFreq = minFreq + (i / numLabels) * (maxFreq - minFreq);
+                    const x = (i / numLabels) * fftCanvas.width;
+                    ctx.fillText(`${Math.round(labelFreq)} Hz`, x, fftCanvas.height - 5);
+                }
+
+                animationId = requestAnimationFrame(draw);
+            }
+
+            initializeTable();
+            draw();
+        }
+
+        window.onload = resizeCanvas;
+    </script>
+</body>
+</html>
+
